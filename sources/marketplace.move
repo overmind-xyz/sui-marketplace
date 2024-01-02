@@ -6,7 +6,7 @@
     purchased item receipt for each item purchased.
 
     Shops: 
-        A Shop is a global shared object that is managed by the show owner. The shop object holds 
+        A Shop is a global shared object that is managed by the shop owner. The shop object holds 
         items and the balance of SUI coins in the shop. 
     
     Shop ownership: 
@@ -25,7 +25,7 @@
 
         The buyer must provide a payment coin for the item. The payment coin must be equal to or 
         greater than the price of the item. If the payment coin is greater than the price of the
-        item, the change will be returned to the buyer. 
+        item, the change will be left in the payment coin. 
 
         The profit from the sale of the item will be added to the shop balance. 
 
@@ -37,7 +37,7 @@
         item is unlisted, it will no longer be available for purchase.
 
     Withdrawing from a shop: 
-        The shop owner can withdraw from their shop with the withdraw_from_shop function. The shop 
+        The shop owner can withdraw SUI from their shop with the withdraw_from_shop function. The shop 
         owner can withdraw any amount from their shop that is equal to or below the total amount in 
         the shop. The amount withdrawn will be sent to the recipient address specified.    
 */
@@ -62,7 +62,7 @@ module overmind::marketplace {
     use sui::test_utils::assert_eq;
 
     //==============================================================================================
-    // Constants - Add your constants here
+    // Constants - Add your constants here (if any)
     //==============================================================================================
 
     //==============================================================================================
@@ -75,6 +75,7 @@ module overmind::marketplace {
     const EInvalidItemId: u64 = 5;
     const EInvalidPrice: u64 = 6;
     const EInvalidSupply: u64 = 7;
+    const EItemIsNotListed: u64 = 8;
 
     //==============================================================================================
     // Module Structs - DO NOT MODIFY
@@ -100,7 +101,7 @@ module overmind::marketplace {
 	}
 
     /*
-        The shop owner capability struct represents the shop owner capability of a shop. The shop
+        The shop owner capability struct represents the ownership of a shop. The shop
         owner capability is a object that is owned by the shop owner and is used to manage the shop.
         @param id - The object id of the shop owner capability object.
         @param shop - The object id of the shop object.
@@ -117,7 +118,7 @@ module overmind::marketplace {
             vector.
         @param title - The title of the item.
         @param description - The description of the item.
-        @param price - The price of the item (each).
+        @param price - The price of the item (price per each quantity).
         @param url - The url of item image.
         @param listed - Whether the item is listed. If the item is not listed, it will not be 
             available for purchase.
@@ -152,7 +153,7 @@ module overmind::marketplace {
     }
 
     //==============================================================================================
-    // Event structs
+    // Event structs - DO NOT MODIFY
     //==============================================================================================
 
     /*
@@ -222,8 +223,8 @@ module overmind::marketplace {
 	}
 
     /*
-        Adds an item to the shop and emits an ItemAdded event. Abort if the shop owner capability
-        does not match the shop.
+        Adds a new item to the shop and emits an ItemAdded event. Abort if the shop owner capability
+        does not match the shop, if the price is not above 0, or if the supply is not above 0.
         @param shop - The shop to add the item to.
         @param shop_owner_cap - The shop owner capability of the shop.
         @param title - The title of the item.
@@ -264,7 +265,8 @@ module overmind::marketplace {
 
     /*
         Purchases an item from the shop and emits an ItemPurchased event. Abort if the item id is
-        invalid, the payment coin is insufficient, or the shop does not have enough available supply.
+        invalid, the payment coin is insufficient, if the item is unlisted, or the shop does not 
+        have enough available supply. Emit an ItemUnlisted event if the last item(s) are purchased.
         @param shop - The shop to purchase the item from.
         @param item_id - The id of the item to purchase.
         @param quantity - The quantity of the item to purchase.
@@ -284,8 +286,8 @@ module overmind::marketplace {
     }
 
     /*
-        Withdraws from the shop and emits a ShopWithdrawal event. Abort if the shop owner
-        capability does not match the shop or if the amount is invalid.
+        Withdraws SUI from the shop to the recipient and emits a ShopWithdrawal event. Abort if the 
+        shop owner capability does not match the shop or if the amount is invalid.
         @param shop - The shop to withdraw from.
         @param shop_owner_cap - The shop owner capability of the shop.
         @param amount - The amount to withdraw.
@@ -303,7 +305,7 @@ module overmind::marketplace {
     }
 
     //==============================================================================================
-    // Helper functions - Add your validation function here (if any)
+    // Helper functions - Add your helper functions here (if any)
     //==============================================================================================
 
     //==============================================================================================
@@ -311,7 +313,7 @@ module overmind::marketplace {
     //==============================================================================================
 
     //==============================================================================================
-    // Tests
+    // Tests - DO NOT MODIFY
     //==============================================================================================
     #[test]
     public fun test_create_shop_success_create_shop_for_user() {
@@ -323,7 +325,12 @@ module overmind::marketplace {
         {
             create_shop(shop_owner, test_scenario::ctx(scenario));
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop_owner_cap = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
@@ -334,7 +341,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
     }
 
     #[test]
@@ -347,7 +359,12 @@ module overmind::marketplace {
         {
             create_shop(shop_owner, test_scenario::ctx(scenario));
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop_owner_cap = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
@@ -358,12 +375,22 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             create_shop(shop_owner, test_scenario::ctx(scenario));
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop_owner_cap = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
@@ -374,12 +401,22 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             create_shop(shop_owner, test_scenario::ctx(scenario));
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop_owner_cap = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
@@ -390,7 +427,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
     }
 
     #[test]
@@ -405,7 +447,13 @@ module overmind::marketplace {
             create_shop(user1, test_scenario::ctx(scenario));
         };
 
-        test_scenario::next_tx(scenario, user1);
+        let tx = test_scenario::next_tx(scenario, user1);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
         {
             let shop_owner_cap_of_user_1 = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
             let shop_of_user_1 = test_scenario::take_shared<Shop>(scenario);
@@ -416,12 +464,24 @@ module overmind::marketplace {
             test_scenario::return_shared(shop_of_user_1);
         };
         
-        test_scenario::next_tx(scenario, user2);
+        let tx = test_scenario::next_tx(scenario, user2);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
         {
             create_shop(user2, test_scenario::ctx(scenario));
         };
 
-        test_scenario::next_tx(scenario, user2);
+        let tx = test_scenario::next_tx(scenario, user2);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
         {
             let shop_owner_cap_of_user_2 = test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
             let shop_of_user_2 = test_scenario::take_shared<Shop>(scenario);
@@ -432,7 +492,13 @@ module overmind::marketplace {
             test_scenario::return_shared(shop_of_user_2);
         };
 
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
     }
 
     #[test]
@@ -445,7 +511,12 @@ module overmind::marketplace {
         {
             create_shop(shop_owner, test_scenario::ctx(scenario));
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         let expected_title = b"title";
         let expected_description = b"description";
@@ -472,7 +543,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
 
@@ -497,7 +573,13 @@ module overmind::marketplace {
 
             test_scenario::return_shared(shop);
         };
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
     }
 
     #[test, expected_failure(abort_code = EInvalidPrice)]
@@ -822,7 +904,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -851,7 +938,12 @@ module overmind::marketplace {
 
             coin::destroy_zero(payment_coin);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -871,7 +963,12 @@ module overmind::marketplace {
             test_scenario::return_shared(shop);
             test_scenario::return_to_sender(scenario, purchased_item);
         };
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
     }
 
     #[test]
@@ -935,7 +1032,12 @@ module overmind::marketplace {
 
             coin::destroy_zero(payment_coin);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 2;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -990,7 +1092,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -1018,7 +1125,45 @@ module overmind::marketplace {
 
             coin::destroy_zero(payment_coin);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
+        {
+            let shop = test_scenario::take_shared<Shop>(scenario);
+            let item_id = 0;
+            let item_ref = vector::borrow(&shop.items, item_id);
+
+            let price = item_ref.price;
+            let quantity_to_buy = 1;
+
+            let payment_coin = sui::coin::mint_for_testing<SUI>(
+                price * quantity_to_buy + 1, 
+                test_scenario::ctx(scenario)
+            );
+
+            purchase_item(
+                &mut shop, 
+                item_ref.id, 
+                quantity_to_buy, 
+                buyer, 
+                &mut payment_coin, 
+                test_scenario::ctx(scenario)
+            );
+
+            test_scenario::return_shared(shop);
+
+            transfer::public_transfer(payment_coin, @0x0);
+        };
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -1046,35 +1191,12 @@ module overmind::marketplace {
 
             coin::destroy_zero(payment_coin);
         };
-        test_scenario::next_tx(scenario, buyer);
-
-        {
-            let shop = test_scenario::take_shared<Shop>(scenario);
-            let item_id = 0;
-            let item_ref = vector::borrow(&shop.items, item_id);
-
-            let price = item_ref.price;
-            let quantity_to_buy = 1;
-
-            let payment_coin = sui::coin::mint_for_testing<SUI>(
-                price, 
-                test_scenario::ctx(scenario)
-            );
-
-            purchase_item(
-                &mut shop, 
-                item_ref.id, 
-                quantity_to_buy, 
-                buyer, 
-                &mut payment_coin, 
-                test_scenario::ctx(scenario)
-            );
-
-            test_scenario::return_shared(shop);
-
-            coin::destroy_zero(payment_coin);
-        };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -1158,7 +1280,12 @@ module overmind::marketplace {
 
             coin::destroy_zero(payment_coin);
         };
-        test_scenario::next_tx(scenario, buyer);
+        let tx = test_scenario::next_tx(scenario, buyer);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let expected_quantity_purchased = 5;
@@ -1169,6 +1296,112 @@ module overmind::marketplace {
             let item_ref = vector::borrow(&shop.items, item_id);
             assert_eq(item_ref.available, expected_supply - expected_quantity_purchased);
             assert_eq(balance::value(&shop.balance), item_ref.price * expected_quantity_purchased);
+            assert_eq(item_ref.listed, true);
+
+            let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
+            assert_eq(purchased_item.item_id, item_ref.id);
+
+            test_scenario::return_shared(shop);
+            test_scenario::return_to_sender(scenario, purchased_item);
+        };
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+    }
+
+    #[test, expected_failure(abort_code = EItemIsNotListed)]
+    public fun test_purchase_item_failure_item_is_unlisted() {
+        let shop_owner = @0xa;
+        let buyer = @0xb;
+
+        let scenario_val = test_scenario::begin(shop_owner);
+        let scenario = &mut scenario_val;
+
+        {
+            create_shop(shop_owner, test_scenario::ctx(scenario));
+        };
+        test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let shop_owner_cap  = 
+                test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
+            let shop = test_scenario::take_shared<Shop>(scenario);
+
+            add_item(
+                &mut shop, 
+                &shop_owner_cap,
+                b"title", 
+                b"description", 
+                b"url", 
+                1000000000, // 1 SUI
+                34, 
+                3
+            );
+
+            test_scenario::return_to_sender(scenario, shop_owner_cap);
+            test_scenario::return_shared(shop);
+        };
+        test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let shop_owner_cap  = 
+                test_scenario::take_from_sender<ShopOwnerCapability>(scenario);
+            let shop = test_scenario::take_shared<Shop>(scenario);
+            let item_id = 0;
+            let item_ref = vector::borrow(&shop.items, item_id);
+
+            unlist_item(
+                &mut shop, 
+                &shop_owner_cap,
+                item_ref.id
+            );
+
+            test_scenario::return_to_sender(scenario, shop_owner_cap);
+            test_scenario::return_shared(shop);
+        };
+        test_scenario::next_tx(scenario, buyer);
+
+        {
+            let shop = test_scenario::take_shared<Shop>(scenario);
+            let item_id = 0;
+            let item_ref = vector::borrow(&shop.items, item_id);
+
+            let price = item_ref.price;
+            let quantity_to_buy = 1;
+
+            let payment_coin = sui::coin::mint_for_testing<SUI>(
+                price * quantity_to_buy, 
+                test_scenario::ctx(scenario)
+            );
+
+            purchase_item(
+                &mut shop, 
+                item_ref.id, 
+                quantity_to_buy, 
+                buyer, 
+                &mut payment_coin, 
+                test_scenario::ctx(scenario)
+            );
+
+            test_scenario::return_shared(shop);
+
+            coin::destroy_zero(payment_coin);
+        };
+        test_scenario::next_tx(scenario, buyer);
+
+        {
+            let shop = test_scenario::take_shared<Shop>(scenario);
+            let item_id = 0;
+            let item_ref = vector::borrow(&shop.items, item_id);
+
+            let expected_total_supply = 34;
+            let expected_quantity_purchased = 1;
+
+            assert_eq(item_ref.available, expected_total_supply - expected_quantity_purchased);
+            assert_eq(balance::value(&shop.balance), item_ref.price);
             assert_eq(item_ref.listed, true);
 
             let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
@@ -1356,7 +1589,12 @@ module overmind::marketplace {
             test_scenario::return_to_sender(scenario, shop_owner_cap);
             test_scenario::return_shared(shop);
         };
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -1366,7 +1604,12 @@ module overmind::marketplace {
 
             test_scenario::return_shared(shop);
         };
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
     }
 
     #[test]
@@ -1476,7 +1719,13 @@ module overmind::marketplace {
             test_scenario::return_shared(shop);
         };
 
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
         {
             let shop = test_scenario::take_shared<Shop>(scenario);
             let item_id = 0;
@@ -1491,7 +1740,12 @@ module overmind::marketplace {
             test_scenario::return_shared(shop);
         };
 
-        test_scenario::end(scenario_val);
+        let tx = test_scenario::end(scenario_val);
+        let expected_events_emitted = 0;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
     }
 
     #[test, expected_failure(abort_code = ENotShopOwner)]
@@ -1629,7 +1883,13 @@ module overmind::marketplace {
             test_scenario::return_shared(shop);
         };
 
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
+
         {
             let expected_shop_balance = 0;
             let shop = test_scenario::take_shared<Shop>(scenario);
@@ -1732,7 +1992,12 @@ module overmind::marketplace {
             test_scenario::return_shared(shop);
         };
 
-        test_scenario::next_tx(scenario, shop_owner);
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+        let expected_events_emitted = 1;
+        assert_eq(
+            test_scenario::num_user_events(&tx),
+            expected_events_emitted
+        );
 
         {
             let expected_amount_left_over = 500000000;
