@@ -94,10 +94,10 @@ module overmind::marketplace {
     */
 	struct Shop has key {
 		id: UID,
-        	shop_owner_cap: ID,
+		shop_owner_cap: ID,
 		balance: Balance<SUI>,
 		items: vector<Item>,
-        	item_count: u64
+		item_count: u64
 	}
 
     /*
@@ -133,10 +133,10 @@ module overmind::marketplace {
 		description: String,
 		price: u64,
 		url: Url,
-	        listed: bool,
-	        category: u8,
-	        total_supply: u64,
-	        available: u64
+		listed: bool,
+		category: u8,
+		total_supply: u64,
+		available: u64
 	}
 
     /*
@@ -216,7 +216,7 @@ module overmind::marketplace {
 	/*
         Creates a new shop for the recipient and emits a ShopCreated event.
         @param recipient - The address of the recipient of the shop.
-        @param ctx - The transaction context.
+		@param ctx - The transaction context.
 	*/
 	public entry fun create_shop(recipient: address, ctx: &mut TxContext) {
 	        
