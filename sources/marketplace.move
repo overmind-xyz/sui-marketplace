@@ -51,7 +51,7 @@ module overmind::marketplace {
     use sui::sui::SUI;
     use sui::transfer;
     use sui::url::{Self, Url};
-    use sui::object::{UID, ID};
+    use sui::object::{Self, UID, ID};
     use sui::tx_context::TxContext;
     use std::string::{Self, String};
     use sui::balance::{Self, Balance};
