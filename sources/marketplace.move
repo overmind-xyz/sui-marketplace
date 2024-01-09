@@ -94,10 +94,10 @@ module overmind::marketplace {
     */
 	struct Shop has key {
 		id: UID,
-		shop_owner_cap: ID,
+        shop_owner_cap: ID,
 		balance: Balance<SUI>,
 		items: vector<Item>,
-		item_count: u64
+        item_count: u64
 	}
 
     /*
@@ -133,10 +133,10 @@ module overmind::marketplace {
 		description: String,
 		price: u64,
 		url: Url,
-		listed: bool,
-		category: u8,
-		total_supply: u64,
-		available: u64
+        listed: bool,
+        category: u8,
+        total_supply: u64,
+        available: u64
 	}
 
     /*
@@ -216,7 +216,7 @@ module overmind::marketplace {
 	/*
         Creates a new shop for the recipient and emits a ShopCreated event.
         @param recipient - The address of the recipient of the shop.
-		@param ctx - The transaction context.
+        @param ctx - The transaction context.
 	*/
 	public fun create_shop(recipient: address, ctx: &mut TxContext) {
         
@@ -960,6 +960,11 @@ module overmind::marketplace {
             let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
             assert_eq(purchased_item.item_id, item_ref.id);
 
+            assert_eq(
+                vector::length(&test_scenario::ids_for_sender<PurchasedItem>(scenario)), 
+                1
+            );
+
             test_scenario::return_shared(shop);
             test_scenario::return_to_sender(scenario, purchased_item);
         };
@@ -1053,6 +1058,11 @@ module overmind::marketplace {
 
             let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
             assert_eq(purchased_item.item_id, item_ref.id);
+
+            assert_eq(
+                vector::length(&test_scenario::ids_for_sender<PurchasedItem>(scenario)), 
+                10
+            );
 
             test_scenario::return_shared(shop);
             test_scenario::return_to_sender(scenario, purchased_item);
@@ -1213,6 +1223,11 @@ module overmind::marketplace {
             let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
             assert_eq(purchased_item.item_id, item_ref.id);
 
+            assert_eq(
+                vector::length(&test_scenario::ids_for_sender<PurchasedItem>(scenario)), 
+                3
+            );
+
             test_scenario::return_shared(shop);
             test_scenario::return_to_sender(scenario, purchased_item);
         };
@@ -1300,6 +1315,11 @@ module overmind::marketplace {
 
             let purchased_item = test_scenario::take_from_sender<PurchasedItem>(scenario);
             assert_eq(purchased_item.item_id, item_ref.id);
+
+            assert_eq(
+                vector::length(&test_scenario::ids_for_sender<PurchasedItem>(scenario)), 
+                5
+            );
 
             test_scenario::return_shared(shop);
             test_scenario::return_to_sender(scenario, purchased_item);
