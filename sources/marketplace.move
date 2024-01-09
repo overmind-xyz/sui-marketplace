@@ -218,8 +218,8 @@ module overmind::marketplace {
         @param recipient - The address of the recipient of the shop.
 		@param ctx - The transaction context.
 	*/
-	public entry fun create_shop(recipient: address, ctx: &mut TxContext) {
-	        
+	public fun create_shop(recipient: address, ctx: &mut TxContext) {
+        
 	}
 
     /*
@@ -235,7 +235,7 @@ module overmind::marketplace {
         @param category - The category of the item.
         @param ctx - The transaction context.
     */
-    public entry fun add_item(
+    public fun add_item(
         shop: &mut Shop,
         shop_owner_cap: &ShopOwnerCapability, 
         title: vector<u8>,
@@ -255,7 +255,7 @@ module overmind::marketplace {
         @param shop_owner_cap - The shop owner capability of the shop.
         @param item_id - The id of the item to unlist.
     */
-    public entry fun unlist_item(
+    public fun unlist_item(
         shop: &mut Shop,
         shop_owner_cap: &ShopOwnerCapability,
         item_id: u64
@@ -274,7 +274,7 @@ module overmind::marketplace {
         @param payment_coin - The payment coin for the item.
         @param ctx - The transaction context.
     */
-    public entry fun purchase_item(
+    public fun purchase_item(
         shop: &mut Shop, 
         item_id: u64,
         quantity: u64,
@@ -294,7 +294,7 @@ module overmind::marketplace {
         @param recipient - The address of the recipient of the withdrawal.
         @param ctx - The transaction context.
     */
-    public entry fun withdraw_from_shop(
+    public fun withdraw_from_shop(
         shop: &mut Shop,
         shop_owner_cap: &ShopOwnerCapability,
         amount: u64,
